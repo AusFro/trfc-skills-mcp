@@ -1,33 +1,30 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { completable } from "@modelcontextprotocol/sdk/server/completable.js";
 import { z } from "zod";
-import { FAVORITES, loadLibrary, readSkillFile, type Library, type Skill } from "./library.ts";
+import { loadLibrary, readSkillFile, type Library, type Skill } from "./library.ts";
 
 const MANUAL_ONLY =
   "Only use this when the user explicitly asks to use the skills server (e.g. \"use my skills\", \"use the skills MCP\"). Never call it on your own initiative.";
 
-const INSTRUCTIONS = `This server holds the user's personal skill library: skills (reusable instructions) grouped into categories (playbooks for a phase of work such as "build" or "review").
+const INSTRUCTIONS = `This server holds the user's skill library: skills (reusable instructions) grouped into categories (one per phase of work, e.g. "build", "ship").
 ${MANUAL_ONLY}
-When asked, start with load_category for the phase the user names (or list_skills if unsure which), follow its playbook, and fetch optional or related skills with get_skill only when the task needs them.`;
+Selection is already done for you, so this is one lookup, not research:
+1. Call load_category once for the phase the user names. Use list_skills only if no category fits.
+2. Apply its primary skills. They are the user's chosen defaults.
+3. Load a secondary skill with get_skill only when its one-line description fits the task clearly better than the primaries. Otherwise ignore them.
+Do not browse the library or read skills you will not apply.`;
 
 function bullet(skill: Skill | undefined, name: string): string {
   return skill ? `- **${name}** — ${skill.description}` : `- **${name}** — (missing)`;
 }
 
 export function renderCatalog(lib: Library): string {
-  const favorites = new Set(lib.categories.get(FAVORITES)?.skills ?? []);
-  const lines = ["# Skill library", ""];
-  if (favorites.size) {
-    lines.push("## Favorites", ...[...favorites].map((n) => bullet(lib.skills.get(n), n)), "");
-  }
-  lines.push("## Categories");
+  const lines = ["# Skill library", "", "## Categories"];
   for (const c of lib.categories.values()) {
-    if (c.name === FAVORITES) continue;
-    const members = [...c.skills, ...c.optional.map((n) => `${n} (optional)`)];
-    lines.push(`- **${c.name}** — ${c.description}${members.length ? ` [${members.join(", ")}]` : ""}`);
+    const secondary = c.secondary.length ? `; secondary: ${c.secondary.join(", ")}` : "";
+    lines.push(`- **${c.name}** — ${c.description} (primary: ${c.primary.join(", ") || "none"}${secondary})`);
   }
-  lines.push("", "## All skills");
-  for (const s of lib.skills.values()) lines.push(`${bullet(s, s.name)}${favorites.has(s.name) ? " ★" : ""}`);
+  lines.push("", "## All skills", ...[...lib.skills.values()].map((s) => bullet(s, s.name)));
   if (lib.problems.length) lines.push("", "## Library problems", ...lib.problems.map((p) => `- ${p}`));
   return lines.join("\n");
 }
@@ -53,20 +50,21 @@ export function renderCategory(lib: Library, name: string): string {
   const parts = [`# Category: ${category.name}`, `> ${category.description}`];
   if (category.playbook) parts.push(`## Playbook\n\n${category.playbook}`);
 
-  const loaded = category.skills.map((n) => lib.skills.get(n)).filter((s): s is Skill => s != null);
-  for (const skill of loaded) {
-    parts.push(`## Skill: ${skill.name}\n\n> ${skill.description}\n\n${renderSkillBody(skill)}`);
+  const primary = category.primary.map((n) => lib.skills.get(n)).filter((s): s is Skill => s != null);
+  parts.push(`## Primary skills — apply these${primary.length ? "" : "\n\nNone set."}`);
+  for (const skill of primary) {
+    parts.push(`### ${skill.name}\n\n> ${skill.description}\n\n${renderSkillBody(skill)}`);
   }
 
-  const included = new Set(category.skills);
-  const optional = category.optional.filter((n) => !included.has(n));
-  const related = [...new Set(loaded.flatMap((s) => s.related))].filter((n) => !included.has(n) && !optional.includes(n));
-  const more = [...optional, ...related];
-  if (more.length) {
+  const shown = new Set(category.primary);
+  const secondary = category.secondary.filter((n) => !shown.has(n));
+  secondary.forEach((n) => shown.add(n));
+  const related = [...new Set(primary.flatMap((s) => s.related))].filter((n) => !shown.has(n));
+  if (secondary.length || related.length) {
     parts.push(
       [
-        "## More skills — fetch with get_skill only if the task needs them",
-        ...optional.map((n) => bullet(lib.skills.get(n), n)),
+        "## Secondary skills — load with get_skill only if one clearly fits better than the primaries",
+        ...secondary.map((n) => bullet(lib.skills.get(n), n)),
         ...related.map((n) => `${bullet(lib.skills.get(n), n)} (related)`),
       ].join("\n"),
     );
@@ -92,7 +90,7 @@ export async function createServer(root: string): Promise<McpServer> {
   server.registerTool(
     "list_skills",
     {
-      description: `List the skill library: favorites, categories and every skill with its description. ${MANUAL_ONLY}`,
+      description: `List every category with its primary and secondary skills, and every skill with its description. ${MANUAL_ONLY}`,
       annotations: { readOnlyHint: true },
     },
     async () => text(renderCatalog(await loadLibrary(root))),
@@ -101,7 +99,7 @@ export async function createServer(root: string): Promise<McpServer> {
   server.registerTool(
     "load_category",
     {
-      description: `Load a category (e.g. "build"): its playbook, the full text of its core skills, and a list of optional and related skills. ${MANUAL_ONLY}`,
+      description: `Load a category (e.g. "build"): its playbook, the full text of its primary skills, and one-line descriptions of its secondary skills. Usually the only call needed. ${MANUAL_ONLY}`,
       inputSchema: { name: z.string().describe("Category name, e.g. build") },
       annotations: { readOnlyHint: true },
     },

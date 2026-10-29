@@ -16,10 +16,10 @@ export type Skill = {
 export type Category = {
   name: string;
   description: string;
-  /** Loaded in full whenever the category is loaded. */
-  skills: string[];
-  /** Listed by description only; the agent fetches the ones the task needs. */
-  optional: string[];
+  /** The default picks: inlined in full whenever the category loads. */
+  primary: string[];
+  /** Listed by description only; used when one clearly fits the task better than the primaries. */
+  secondary: string[];
   playbook: string;
 };
 
@@ -28,8 +28,6 @@ export type Library = {
   categories: Map<string, Category>;
   problems: string[];
 };
-
-export const FAVORITES = "favorites";
 
 export function splitFrontmatter(text: string): { data: Record<string, unknown>; body: string } {
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text);
@@ -100,8 +98,8 @@ export async function loadLibrary(root: string): Promise<Library> {
       categories.set(name, {
         name,
         description: String(data.description ?? ""),
-        skills: stringList(data.skills),
-        optional: stringList(data.optional),
+        primary: stringList(data.primary),
+        secondary: stringList(data.secondary),
         playbook: body.trim(),
       });
     }
@@ -113,7 +111,7 @@ export async function loadLibrary(root: string): Promise<Library> {
     }
   }
   for (const category of categories.values()) {
-    for (const ref of [...category.skills, ...category.optional]) {
+    for (const ref of [...category.primary, ...category.secondary]) {
       if (!skills.has(ref)) problems.push(`categories/${category.name}.md: skill "${ref}" does not exist`);
     }
   }

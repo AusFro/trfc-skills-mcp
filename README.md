@@ -7,11 +7,17 @@ My skill library, served to any MCP client from one repo. Skills live in `skills
 ```
 skills/<name>/SKILL.md        # frontmatter: name, description, related?, source?
 skills/<name>/...             # supporting files, fetched on demand
-categories/<name>.md          # frontmatter: description, skills (loaded in full), optional (listed only)
-categories/favorites.md       # favorites are just a category
+categories/<name>.md          # frontmatter: description, primary, secondary; body is the playbook
 ```
 
-`related:` on a skill cross-references other skills; loading a category lists the related skills of its core skills so the agent can pull them in when needed.
+Each category ranks its skills:
+
+- `primary` — the defaults. Inlined in full when the category loads; the agent applies them.
+- `secondary` — listed by one-line description only. The agent loads one only when it clearly fits the task better than the primaries.
+
+`related:` on a skill cross-references other skills; they show up as secondary when a primary that names them loads.
+
+Selection is decided by the files, not by the model: "use my skills to build X" is one `load_category` call that returns exactly what to apply. No skill-picking subagent or fast model is needed; spawning one costs more than the call.
 
 ## What the server exposes
 
@@ -20,7 +26,7 @@ Manual-only by design: every tool description tells the model to call it only wh
 | | |
 |---|---|
 | Tools | `list_skills`, `load_category(name)`, `get_skill(name, file?)` |
-| Prompts | one per category (`build`, `ship`, `favorites`, …) plus `skill(name)` |
+| Prompts | one per category (`build`, `ship`, …) plus `skill(name)` |
 
 In Claude Code the prompts are slash commands: `/mcp__skills__build add auth to the app`. Elsewhere, say "use my skills server to build X".
 
@@ -56,8 +62,8 @@ npx netlify-cli dev     # local: http://localhost:8888/mcp
 ## Adding skills
 
 ```sh
-npm run import -- https://github.com/anthropics/skills/tree/main/skills/mcp-builder --category build
-npm run import -- ~/.claude/skills/some-skill --favorite
+npm run import -- https://github.com/anthropics/skills/tree/main/skills/mcp-builder --category build   # secondary
+npm run import -- ~/.claude/skills/some-skill --category build --primary                              # primary (moves it up if already secondary)
 npm run import -- https://raw.githubusercontent.com/o/r/main/SKILL.md --name my-skill
 npm run check           # every category/related reference resolves
 ```

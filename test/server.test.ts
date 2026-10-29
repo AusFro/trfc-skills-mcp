@@ -20,9 +20,8 @@ async function fixture(): Promise<string> {
   await mkdir(path.join(root, "categories"));
   await writeFile(
     path.join(root, "categories", "build.md"),
-    "---\ndescription: Build features\nskills: [tdd]\noptional: [perf]\n---\nShip small.",
+    "---\ndescription: Build features\nprimary: [tdd]\nsecondary: [perf]\n---\nShip small.",
   );
-  await writeFile(path.join(root, "categories", "favorites.md"), "---\ndescription: Favorites\nskills: [design]\n---\n");
   return root;
 }
 
@@ -38,12 +37,12 @@ function textOf(result: Awaited<ReturnType<Client["callTool"]>>): string {
   return (result.content as { text: string }[])[0].text;
 }
 
-test("load_category inlines core skills and lists optional and related ones", async () => {
+test("load_category inlines primary skills and lists secondary and related ones", async () => {
   const client = await connect(await fixture());
   const out = textOf(await client.callTool({ name: "load_category", arguments: { name: "build" } }));
   assert.match(out, /Ship small\./);
-  assert.match(out, /## Skill: tdd[\s\S]*Write the test first\./);
-  assert.match(out, /\*\*perf\*\* — Make it fast/);
+  assert.match(out, /## Primary skills[\s\S]*### tdd[\s\S]*Write the test first\./);
+  assert.match(out, /## Secondary skills[\s\S]*\*\*perf\*\* — Make it fast/);
   assert.match(out, /\*\*design\*\* — Deep modules \(related\)/);
   assert.doesNotMatch(out, /Hide complexity\./);
 });
@@ -56,11 +55,11 @@ test("get_skill returns supporting files and rejects unknown ones", async () => 
   assert.equal(escape.isError, true);
 });
 
-test("list_skills marks favorites and categories become prompts", async () => {
+test("list_skills shows tiers and categories become prompts", async () => {
   const client = await connect(await fixture());
-  assert.match(textOf(await client.callTool({ name: "list_skills", arguments: {} })), /\*\*design\*\* — Deep modules ★/);
+  assert.match(textOf(await client.callTool({ name: "list_skills", arguments: {} })), /\*\*build\*\* — Build features \(primary: tdd; secondary: perf\)/);
   const prompts = (await client.listPrompts()).prompts.map((p) => p.name).sort();
-  assert.deepEqual(prompts, ["build", "favorites", "skill"]);
+  assert.deepEqual(prompts, ["build", "skill"]);
   const prompt = await client.getPrompt({ name: "build", arguments: { task: "a todo app" } });
   assert.match((prompt.messages[0].content as { text: string }).text, /do this: a todo app$/);
 });

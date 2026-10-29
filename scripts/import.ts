@@ -1,14 +1,16 @@
 #!/usr/bin/env node
 // Imports a skill into skills/<name>/ from a GitHub URL, a raw .md URL, or a local path.
 //
-//   npm run import -- <source> [--name <name>] [--category <category>]... [--favorite]
+//   npm run import -- <source> [--name <name>] [--category <category>]... [--primary]
+//
+// A skill joins each category as secondary unless --primary is given.
 import { execFileSync } from "node:child_process";
 import { cp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { stringify } from "yaml";
-import { FAVORITES, splitFrontmatter } from "../src/library.ts";
+import { splitFrontmatter } from "../src/library.ts";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -17,12 +19,12 @@ const { values, positionals } = parseArgs({
   options: {
     name: { type: "string" },
     category: { type: "string", multiple: true, default: [] },
-    favorite: { type: "boolean", default: false },
+    primary: { type: "boolean", default: false },
   },
 });
 const source = positionals[0];
-if (!source) {
-  console.error("usage: npm run import -- <github-url|raw-md-url|local-path> [--name n] [--category c] [--favorite]");
+if (!source || (values.primary && !values.category.length)) {
+  console.error("usage: npm run import -- <github-url|raw-md-url|local-path> [--name n] [--category c]... [--primary]");
   process.exit(1);
 }
 
@@ -91,18 +93,18 @@ function serialize(data: Record<string, unknown>, body: string): string {
   return `---\n${stringify(data, { lineWidth: 0 }).trimEnd()}\n---\n\n${body.trimStart()}`;
 }
 
-async function addToCategory(category: string, skill: string) {
+async function addToCategory(category: string, skill: string, tier: "primary" | "secondary") {
   const file = path.join(root, "categories", `${category}.md`);
   const existing = await readFile(file, "utf8").catch(() => null);
   const { data, body } = existing
     ? splitFrontmatter(existing)
-    : { data: { description: `TODO: describe the ${category} category`, skills: [] as string[] }, body: "" };
-  const skills = new Set((data.skills as string[] | undefined) ?? []);
-  skills.add(skill);
-  data.skills = [...skills];
+    : { data: { description: `TODO: describe the ${category} category` } as Record<string, unknown>, body: "" };
+  const other = tier === "primary" ? "secondary" : "primary";
+  data[other] = ((data[other] as string[] | undefined) ?? []).filter((n) => n !== skill);
+  data[tier] = [...new Set([...((data[tier] as string[] | undefined) ?? []), skill])];
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, serialize(data, body));
-  console.log(`${existing ? "updated" : "created"} categories/${category}.md`);
+  console.log(`${existing ? "updated" : "created"} categories/${category}.md (${tier})`);
 }
 
 const staging = path.join(root, ".import-staging");
@@ -126,8 +128,8 @@ try {
   await cp(dir, dest, { recursive: true });
   console.log(`${replaced ? "replaced" : "imported"} skills/${name}`);
 
-  for (const category of values.favorite ? [...values.category, FAVORITES] : values.category) {
-    await addToCategory(category, name);
+  for (const category of values.category) {
+    await addToCategory(category, name, values.primary ? "primary" : "secondary");
   }
 } finally {
   await rm(staging, { recursive: true, force: true });
