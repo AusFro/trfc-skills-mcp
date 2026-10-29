@@ -1,0 +1,26 @@
+{
+  "name": "skills-mcp",
+  "version": "1.0.0",
+  "description": "A personal skill library served over MCP",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=22.18" },
+  "bin": { "skills-mcp": "src/stdio.ts" },
+  "scripts": {
+    "start": "node src/stdio.ts",
+    "import": "node scripts/import.ts",
+    "check": "node scripts/check.ts",
+    "test": "node --test test/",
+    "typecheck": "tsc",
+    "inspect": "npx -y @modelcontextprotocol/inspector node src/stdio.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}

@@ -1,0 +1,4 @@
+node_modules/
+.import-staging/
+.netlify/
+.DS_Store
