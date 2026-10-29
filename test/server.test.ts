@@ -8,7 +8,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createServer } from "../src/server.ts";
 
 async function fixture(): Promise<string> {
-  const root = await mkdtemp(path.join(tmpdir(), "skills-mcp-"));
+  const root = await mkdtemp(path.join(tmpdir(), "trfc-skills-mcp-"));
   const skill = async (name: string, frontmatter: string, body: string) => {
     await mkdir(path.join(root, "skills", name, "references"), { recursive: true });
     await writeFile(path.join(root, "skills", name, "SKILL.md"), `---\nname: ${name}\n${frontmatter}\n---\n${body}`);

@@ -1,11 +1,11 @@
 {
-  "name": "skills-mcp",
+  "name": "trfc-skills-mcp",
   "version": "1.0.0",
   "description": "A personal skill library served over MCP",
   "type": "module",
   "private": true,
   "engines": { "node": ">=22.18" },
-  "bin": { "skills-mcp": "src/stdio.ts" },
+  "bin": { "trfc-skills-mcp": "src/stdio.ts" },
   "scripts": {
     "start": "node src/stdio.ts",
     "import": "node scripts/import.ts",

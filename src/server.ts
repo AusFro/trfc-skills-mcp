@@ -4,7 +4,7 @@ import { z } from "zod";
 import { loadLibrary, readSkillFile, type Library, type Skill } from "./library.ts";
 
 const MANUAL_ONLY =
-  "Only use this when the user explicitly asks to use the skills server (e.g. \"use my skills\", \"use the skills MCP\"). Never call it on your own initiative.";
+  "Only use this when the user explicitly asks to use the skills server (e.g. \"use trfc-skills\", \"use my skills\"). Never call it on your own initiative.";
 
 const INSTRUCTIONS = `This server holds the user's skill library: skills (reusable instructions) grouped into categories (one per phase of work, e.g. "build", "ship").
 ${MANUAL_ONLY}
@@ -85,7 +85,7 @@ function unknown(kind: string, name: string, known: Iterable<string>) {
  * at startup; tools re-read the library on every call.
  */
 export async function createServer(root: string): Promise<McpServer> {
-  const server = new McpServer({ name: "skills", version: "1.0.0" }, { instructions: INSTRUCTIONS });
+  const server = new McpServer({ name: "trfc-skills", version: "1.0.0" }, { instructions: INSTRUCTIONS });
 
   server.registerTool(
     "list_skills",

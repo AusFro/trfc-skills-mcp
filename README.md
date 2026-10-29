@@ -1,4 +1,4 @@
-# skills-mcp
+# trfc-skills-mcp
 
 My skill library, served to any MCP client from one repo. Skills live in `skills/`, categories (phase playbooks such as `build`) in `categories/`. Edit, push, and every device picks it up.
 
@@ -28,25 +28,25 @@ Manual-only by design: every tool description tells the model to call it only wh
 | Tools | `list_skills`, `load_category(name)`, `get_skill(name, file?)` |
 | Prompts | one per category (`build`, `ship`, …) plus `skill(name)` |
 
-In Claude Code the prompts are slash commands: `/mcp__skills__build add auth to the app`. Elsewhere, say "use my skills server to build X".
+In Claude Code the prompts are slash commands: `/mcp__trfc-skills__build add auth to the app`. Elsewhere, say "use trfc-skills to build X".
 
 ## Setup on a device
 
 Requires Node ≥ 22.18 (runs the TypeScript directly; no build step).
 
 ```sh
-git clone git@github.com:AusFro/skills-mcp.git ~/skills-mcp
-cd ~/skills-mcp && npm install
+git clone git@github.com:AusFro/trfc-skills-mcp.git ~/trfc-skills-mcp
+cd ~/trfc-skills-mcp && npm install
 ```
 
 Point the client at it (stdio):
 
 ```sh
-claude mcp add --scope user skills -- node ~/skills-mcp/src/stdio.ts
+claude mcp add --scope user trfc-skills -- node ~/trfc-skills-mcp/src/stdio.ts
 ```
 
 ```json
-{ "mcpServers": { "skills": { "command": "node", "args": ["/Users/me/skills-mcp/src/stdio.ts"] } } }
+{ "mcpServers": { "trfc-skills": { "command": "node", "args": ["/Users/me/trfc-skills-mcp/src/stdio.ts"] } } }
 ```
 
 On start the server runs `git pull --ff-only` in the background (`SKILLS_AUTO_PULL=0` disables it), and every tool call re-reads the files, so pushed edits arrive without reinstalling anything.
@@ -77,3 +77,7 @@ npm test
 npm run typecheck
 npm run inspect         # MCP Inspector against the stdio server
 ```
+
+## Third-party skills
+
+Imported skills keep their upstream license; notices are in `THIRD_PARTY_LICENSES.md`. Add one there when importing from a new source.
