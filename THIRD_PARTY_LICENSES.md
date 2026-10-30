@@ -27,3 +27,9 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
+
+## Jakubantalik/transitions.dev
+
+Skill: transitions-ui-generation. Source: https://github.com/Jakubantalik/transitions.dev
+
+Free for personal and commercial use; no republishing as a competing transitions library. Full text in `skills/transitions-ui-generation/LICENSE.txt` and https://transitions.dev/terms.html.
