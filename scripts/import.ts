@@ -38,7 +38,7 @@ function githubToken(): string | undefined {
 }
 
 async function fetchOk(url: string, headers: Record<string, string> = {}): Promise<Response> {
-  const response = await fetch(url, { headers });
+  const response = await fetch(url, { headers, signal: AbortSignal.timeout(30_000) });
   if (!response.ok) throw new Error(`${response.status} ${response.statusText}: ${url}`);
   return response;
 }
