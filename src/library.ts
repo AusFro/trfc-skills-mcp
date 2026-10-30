@@ -32,7 +32,27 @@ export type Library = {
 export function splitFrontmatter(text: string): { data: Record<string, unknown>; body: string } {
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(text);
   if (!match) return { data: {}, body: text };
-  return { data: (parseYaml(match[1]) ?? {}) as Record<string, unknown>, body: text.slice(match[0].length) };
+  return { data: parseFrontmatter(match[1]), body: text.slice(match[0].length) };
+}
+
+/**
+ * Agent clients accept frontmatter that is not valid YAML, most often an
+ * unquoted description containing ": ". Falls back to reading each top-level
+ * `key: value` line (plus indented continuation lines) as a string.
+ */
+function parseFrontmatter(source: string): Record<string, unknown> {
+  try {
+    return (parseYaml(source) ?? {}) as Record<string, unknown>;
+  } catch {
+    const data: Record<string, unknown> = {};
+    let key: string | undefined;
+    for (const line of source.split(/\r?\n/)) {
+      const field = /^([A-Za-z][\w-]*):\s*(.*)$/.exec(line);
+      if (field) [, key, data[field[1]]] = field;
+      else if (key && /^\s+\S/.test(line)) data[key] = `${data[key]} ${line.trim()}`.trim();
+    }
+    return data;
+  }
 }
 
 function stringList(value: unknown): string[] {

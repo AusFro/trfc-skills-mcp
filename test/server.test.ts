@@ -55,6 +55,18 @@ test("get_skill returns supporting files and rejects unknown ones", async () => 
   assert.equal(escape.isError, true);
 });
 
+test("frontmatter that is not strict YAML still loads", async () => {
+  const root = await fixture();
+  await mkdir(path.join(root, "skills", "loose"));
+  await writeFile(
+    path.join(root, "skills", "loose", "SKILL.md"),
+    "---\nname: loose\ndescription: Variants: ui (the default: a wireframe)\n---\nBody.",
+  );
+  const client = await connect(root);
+  const out = textOf(await client.callTool({ name: "get_skill", arguments: { name: "loose" } }));
+  assert.match(out, /> Variants: ui \(the default: a wireframe\)\n\nBody\./);
+});
+
 test("list_skills shows tiers and categories become prompts", async () => {
   const client = await connect(await fixture());
   assert.match(textOf(await client.callTool({ name: "list_skills", arguments: {} })), /\*\*build\*\* — Build features \(primary: tdd; secondary: perf\)/);
